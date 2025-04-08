@@ -3,6 +3,7 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
+local rightHand = character:WaitForChild("RightHand")  -- Getting the RightHand part
 
 -- Tool Names Setup
 local function setToolName(index, name)
@@ -54,7 +55,7 @@ local function spawnSword()
     handle.Color = Color3.fromRGB(255, 255, 0) -- Yellow color for the handle
     handle.Anchored = false
     handle.CanCollide = false
-    handle.Position = character.HumanoidRootPart.Position + Vector3.new(1, 1, 0) -- Position it near the character
+    handle.Position = rightHand.Position -- Position it at the right hand
     handle.Parent = sword
 
     -- Blade
@@ -73,8 +74,29 @@ local function spawnSword()
     weld.Part1 = blade
     weld.Parent = handle
 
+    -- Weld the sword to the Right Hand
+    local handWeld = Instance.new("WeldConstraint")
+    handWeld.Part0 = rightHand
+    handWeld.Part1 = handle
+    handWeld.Parent = rightHand
+
     -- Add the sword model to the character
     sword.Parent = character
+
+    -- Blood Effect (When the sword hits something)
+    blade.Touched:Connect(function(hit)
+        -- Only apply blood if it hits a part that isn't the player's own character
+        if hit.Parent and hit.Parent ~= character then
+            -- Blood particle effect
+            local blood = Instance.new("ParticleEmitter")
+            blood.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0)) -- Red blood
+            blood.Size = NumberSequence.new(0.5, 2) -- Blood particles grow larger
+            blood.Lifetime = NumberRange.new(0.5, 1) -- Blood particles lifetime
+            blood.Rate = 50 -- Blood particle spawn rate
+            blood.Parent = hit
+            game:GetService("Debris"):AddItem(blood, 1)  -- Remove blood after 1 second
+        end
+    end)
 end
 
 -- Remove Sword (Slicen animation ends)
@@ -85,33 +107,7 @@ local function removeSword()
     end
 end
 
--- Red Beam for Normal Kick
-local function spawnRedLine()
-    local line = Instance.new("Beam")
-    line.Name = "RedKickLine"
-    line.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0))  -- Red color
-    line.Width0 = 0.2
-    line.Width1 = 0.2
-    line.Parent = character
-
-    -- Create start attachment at player's foot
-    local startAttachment = Instance.new("Attachment")
-    startAttachment.Parent = character:FindFirstChild("RightFoot")
-    
-    -- Create end attachment 10 studs ahead
-    local endAttachment = Instance.new("Attachment")
-    endAttachment.Parent = character:FindFirstChild("RightFoot")
-    endAttachment.Position = Vector3.new(10, 0, 0)  -- Adjust this to extend in the direction you want
-
-    -- Set attachments to the Beam
-    line.Attachment0 = startAttachment
-    line.Attachment1 = endAttachment
-
-    -- Fade out the beam after the animation is done
-    game:GetService("Debris"):AddItem(line, 1)  -- Automatically remove line after 1 second
-end
-
--- Animation Replacer + Sword + Red Line
+-- Animation Replacer + Sword
 local function onAnimationPlayed(animationTrack)
     local animId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
     local replacementId = animationReplacements[animId]
@@ -133,11 +129,6 @@ local function onAnimationPlayed(animationTrack)
         if replacementId == "rbxassetid://15290930205" then  -- Slicen animation ID
             spawnSword()
             newTrack.Stopped:Connect(removeSword)
-        end
-
-        -- Spawn Red Line (for Normal Kick)
-        if replacementId == "rbxassetid://137561511768861" then  -- Normal Kick animation ID
-            spawnRedLine()
         end
     end
 end
