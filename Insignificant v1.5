@@ -1,0 +1,214 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+-- Tool Names
+local function setToolName(index, name)
+    local hotbar = playerGui:FindFirstChild("Hotbar")
+    local backpack = hotbar and hotbar:FindFirstChild("Backpack")
+    local hotbarFrame = backpack and backpack:FindFirstChild("Hotbar")
+    local baseButton = hotbarFrame and hotbarFrame:FindFirstChild(tostring(index)) and hotbarFrame[tostring(index)].Base
+    if baseButton and baseButton:FindFirstChild("ToolName") then
+        baseButton.ToolName.Text = name
+    end
+end
+
+setToolName(1, "Normal Kick")
+setToolName(2, "Slicen,")
+setToolName(3, "Upper-shove")
+setToolName(4, "Fly-Now-Time-To-Die")
+
+-- GUI Insult Text
+local function findGuiAndSetText()
+    local screenGui = playerGui:FindFirstChild("ScreenGui")
+    if screenGui then
+        local magicHealthFrame = screenGui:FindFirstChild("MagicHealth")
+        if magicHealthFrame then
+            local textLabel = magicHealthFrame:FindFirstChild("TextLabel")
+            if textLabel then
+                textLabel.Text = "you insignificant ult waster."
+            end
+        end
+    end
+end
+
+playerGui.DescendantAdded:Connect(findGuiAndSetText)
+findGuiAndSetText()
+
+-- Animation Replacements
+local animationReplacements = {
+    [10468665991] = "rbxassetid://137561511768861",  -- Move 1
+    [10466974800] = "rbxassetid://15290930205",      -- Move 2 (Slicen)
+    [10471336737] = "rbxassetid://16945573694",      -- Move 3
+    [12510170988] = "rbxassetid://119169968232874",  -- Move 4
+    [12447707844] = "rbxassetid://16002726844",      -- Awakening
+    [11343318134] = "rbxassetid://17278415853",      -- Ult 1
+    [11365563255] = "rbxassetid://17420452843",      -- Ult 2
+    [12983333733] = "rbxassetid://18440406788",      -- Ult 3
+    [13927612951] = "rbxassetid://75502010126640",   -- Ult 4
+    [10479335397] = "rbxassetid://135104210400610",  -- Dash
+    [18535946209] = "rbxassetid://18179181663",      -- Uppercut
+    [18535943546] = "rbxassetid://18716588373",      -- Downslam
+    [10470389827] = "rbxassetid://18715728313"       -- Block
+}
+
+-- Sword Logic
+local swordName = "ClientSword"
+local swordUrl = "https://raw.githubusercontent.com/IlikeMYDOGGO/Sword/refs/heads/main/Linked_Sword.obj"
+
+local function spawnSword()
+    if character:FindFirstChild(swordName) then return end
+
+    local model = Instance.new("Model")
+    model.Name = swordName
+    model.Parent = character
+
+    local hand = character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
+    if not hand then return end
+
+    -- Main Blade
+    local blade = Instance.new("Part")
+    blade.Size = Vector3.new(0.2, 4, 0.5)
+    blade.BrickColor = BrickColor.new("Really black")
+    blade.Material = Enum.Material.Metal
+    blade.Anchored = false
+    blade.CanCollide = false
+    blade.Name = "Blade"
+    blade.Parent = model
+    blade.CFrame = hand.CFrame * CFrame.new(0, -3, 0)
+
+    -- Blade Tip (slanted)
+    local tip = Instance.new("WedgePart")
+    tip.Size = Vector3.new(0.2, 0.8, 0.5)
+    tip.BrickColor = BrickColor.new("Really black")
+    tip.Material = Enum.Material.Metal
+    tip.Anchored = false
+    tip.CanCollide = false
+    tip.Name = "BladeTip"
+    tip.Parent = model
+    tip.CFrame = blade.CFrame * CFrame.new(0, -2.4, 0)
+
+    -- Blade detail (mid shine lines)
+    for i = 1, 2 do
+        local detail = Instance.new("Part")
+        detail.Size = Vector3.new(0.05, 4, 0.05)
+        detail.BrickColor = BrickColor.new("Mid gray")
+        detail.Material = Enum.Material.Metal
+        detail.Anchored = false
+        detail.CanCollide = false
+        detail.Name = "BladeDetail"..i
+        detail.Parent = model
+        local offset = (i == 1) and -0.1 or 0.1
+        detail.CFrame = blade.CFrame * CFrame.new(offset, 0, 0.2)
+    end
+
+    -- Guard
+    local guard = Instance.new("Part")
+    guard.Size = Vector3.new(1.5, 0.2, 0.5)
+    guard.BrickColor = BrickColor.new("Dark stone grey")
+    guard.Material = Enum.Material.Metal
+    guard.Anchored = false
+    guard.CanCollide = false
+    guard.Name = "Guard"
+    guard.Parent = model
+    guard.CFrame = blade.CFrame * CFrame.new(0, 2.1, 0)
+
+    -- Handle (yellow)
+    local handle = Instance.new("Part")
+    handle.Shape = Enum.PartType.Cylinder
+    handle.Size = Vector3.new(0.3, 1.2, 0.3)
+    handle.BrickColor = BrickColor.new("New Yeller")
+    handle.Material = Enum.Material.SmoothPlastic
+    handle.Anchored = false
+    handle.CanCollide = false
+    handle.Orientation = Vector3.new(0, 0, 90)
+    handle.Name = "Handle"
+    handle.Parent = model
+    handle.CFrame = blade.CFrame * CFrame.new(0, 3, 0)
+
+    -- Weld helper
+    local function weldPart(part, to)
+        local weld = Instance.new("WeldConstraint")
+        weld.Part0 = part
+        weld.Part1 = to
+        weld.Parent = part
+    end
+
+    weldPart(blade, hand)
+    weldPart(tip, blade)
+    weldPart(guard, blade)
+    weldPart(handle, blade)
+
+    for _, part in ipairs(model:GetChildren()) do
+        if part:IsA("Part") and not part:FindFirstChildOfClass("WeldConstraint") then
+            weldPart(part, blade)
+        end
+    end
+end
+
+-- Normal Kick Effect (Red Line)
+local function spawnRedLine()
+    local line = Instance.new("Beam")
+    line.Name = "RedKickLine"
+    line.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0))  -- Red color
+    line.Width0 = 0.2
+    line.Width1 = 0.2
+    line.Parent = character
+
+    -- Set the beam attachment points
+    local startAttachment = Instance.new("Attachment")
+    startAttachment.Position = character:FindFirstChild("RightFoot").Position
+    startAttachment.Parent = character:FindFirstChild("RightFoot")
+
+    local endAttachment = Instance.new("Attachment")
+    endAttachment.Position = character:FindFirstChild("RightFoot").Position + Vector3.new(10, 0, 0)  -- Change this to the direction of the kick
+    endAttachment.Parent = character
+
+    line.Attachment0 = startAttachment
+    line.Attachment1 = endAttachment
+
+    -- Fade out the beam after the kick
+    game:GetService("Debris"):AddItem(line, 1)  -- Automatically remove line after 1 second
+end
+
+-- Animation Replacer + Sword + Red Line
+local function onAnimationPlayed(animationTrack)
+    local animId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
+    local replacementId = animationReplacements[animId]
+    if replacementId then
+        for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+            track:Stop()
+        end
+
+        local anim = Instance.new("Animation")
+        anim.AnimationId = replacementId
+        local newTrack = humanoid:LoadAnimation(anim)
+        newTrack:Play()
+        newTrack:AdjustSpeed(1)
+        newTrack.TimePosition = 0
+
+        -- Spawn/Remove sword if it's the Slicen move
+        if replacementId == "rbxassetid://15290930205" then
+            spawnSword()
+            newTrack.Stopped:Connect(removeSword)
+        end
+
+        -- Spawn Red Line on Normal Kick move
+        if replacementId == "rbxassetid://137561511768861" then  -- Normal Kick animation ID
+            spawnRedLine()
+        end
+    end
+end
+
+humanoid.AnimationPlayed:Connect(onAnimationPlayed)
+
+-- BodyVelocity override
+local function onBodyVelocityAdded(obj)
+    if obj:IsA("BodyVelocity") then
+        obj.Velocity = Vector3.new(obj.Velocity.X, 0, obj.Velocity.Z)
+    end
+end
+
+for _,
